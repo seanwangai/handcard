@@ -158,8 +158,7 @@ prompt = """
 【五指毛桃薏米水】就是被称为"广东人参"的五指毛桃+晾晒10天以上的薏米，选用炒过的薏米，因为这样不仅更给力，而且更好喝，每瓶添加超过750mg的五指毛桃，以及5000mg薏米
 【枸杞桂圆水】精选桂圆三宝："桂圆肉、桂圆核、桂圆壳"，每瓶添加3500mg以上的桂圆干，经过48h烘烤，碾碎，整颗桂圆连肉带壳一起煮，营养不流失，再加500mg+的NFC枸杞原浆
 陈皮水：水、陈皮、白茶、青柑皮浓缩液、碳酸氢钠
-喝法：1.直接喝（冷热都好喝）2.搭配咖啡成为中式茶咖  3. 柠檬片或柠檬汁。4.炖鸡汤排骨汤
-"
+喝法：1.直接喝（冷热都好喝）2.搭配咖啡成为中式茶咖  3. 柠檬片或柠檬汁。4.炖鸡汤排骨
     },
     "市场价格": {
       "39.9"
@@ -214,7 +213,7 @@ def query_page(model, image, question, page_num):
             logger.info(f"发送请求到Gemini API - 第 {page_num} 页")
             response = chat.send_message("请提供产品分析结果")
             logger.info(f"收到Gemini API响应 - 第 {page_num} 页")
-
+            logger.info(response.text)
             return response.text  # 直接返回响应文本
 
         finally:
