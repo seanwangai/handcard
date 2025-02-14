@@ -48,35 +48,35 @@ def initialize_gemini():
             "top_p": 0.95,
             "top_k": 40,
             "max_output_tokens": 81920,
-            "response_schema": genai.protos.Schema(
-                type=genai.protos.Type.OBJECT,
-                properties={
-                    "產品亮點": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "市场价格": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "直播价格": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "产品信息": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "口味": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "赠品": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "产品卖点": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                    "其他优势": genai.protos.Schema(
-                        type=genai.protos.Type.STRING,
-                    ),
-                },
-            ),
+            # "response_schema": genai.protos.Schema(
+            #     type=genai.protos.Type.OBJECT,
+            #     properties={
+            #         "產品亮點": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "市场价格": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "直播价格": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "产品信息": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "口味": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "赠品": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "产品卖点": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #         "其他优势": genai.protos.Schema(
+            #             type=genai.protos.Type.STRING,
+            #         ),
+            #     },
+            # ),
             "response_mime_type": "application/json",
         }
 
@@ -152,6 +152,10 @@ prompt = """
 注意 越長越完整越好 越長越好 圖片內的文字有提到的 全部都要納入
 赠品 如果沒有 就顯示 "無" 
 其他优势 欄位 交給你自由發揮，要辨識圖片內有趣的
+
+===
+不要出現 太多 \ n 換行 的bug，最多一個 \ n
+====
 以下是 範例 
 {
 "產品亮點": {
@@ -180,8 +184,6 @@ prompt = """
       "买4瓶送1瓶"
     }
 }
-
-
 """
 
 
