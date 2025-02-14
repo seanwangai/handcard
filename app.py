@@ -275,9 +275,9 @@ def main():
 
             # 生成CSV下载按钮
             df = pd.DataFrame(st.session_state.all_results)
-            columns = ['页码', '產品亮點', '市场价格', '直播价格', '产品信息',
-                       '口味', '赠品', '产品卖点', '其他优势']
-            df = df[columns]
+            # columns = ['页码', '產品亮點', '市场价格', '直播价格', '产品信息',
+            #            '口味', '赠品', '产品卖点', '其他优势']
+            # df = df[columns]
 
             csv = df.to_csv(index=False)
             st.download_button(
