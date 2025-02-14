@@ -232,82 +232,101 @@ def main():
         st.title("PDF AI阅读助手")
         logger.info("应用程序启动")
 
+        # 初始化 session state
+        if 'all_results' not in st.session_state:
+            st.session_state.all_results = []
+        if 'processed_images' not in st.session_state:
+            st.session_state.processed_images = None
+        if 'current_file_name' not in st.session_state:
+            st.session_state.current_file_name = None
+        if 'processing_complete' not in st.session_state:
+            st.session_state.processing_complete = False
+
         # 初始化模型
         model = initialize_gemini()
         if not model:
             return
 
-        # 创建/获取session state
-        if 'all_results' not in st.session_state:
-            st.session_state.all_results = []
-
         # 文件上传
         uploaded_file = st.file_uploader("上传PDF文件", type=['pdf'])
 
         if uploaded_file:
-            logger.info(f"收到上传文件: {uploaded_file.name}")
-            # 转换PDF为图片并立即分析
-            with st.spinner('正在处理文件...'):
-                images = convert_pdf_to_images(uploaded_file)
+            # 检查是否需要重新处理PDF
+            if (st.session_state.current_file_name != uploaded_file.name or
+                    st.session_state.processed_images is None):
 
-                # 清空之前的结果
-                st.session_state.all_results = []
+                logger.info(f"处理新文件: {uploaded_file.name}")
+                # 转换PDF为图片
+                with st.spinner('正在处理文件...'):
+                    images = convert_pdf_to_images(uploaded_file)
+                    st.session_state.processed_images = images
+                    st.session_state.current_file_name = uploaded_file.name
+                    st.session_state.processing_complete = False
+                    st.session_state.all_results = []  # 清空之前的结果
 
-                # 分析每一页
-                for i, image in enumerate(images):
-                    with st.spinner(f'正在分析第 {i+1}/{len(images)} 页...'):
-                        response = query_page(model, image, "分析产品信息", i+1)
-                        if response:
-                            result = json.loads(response)
-                            result['页码'] = i + 1
-                            st.session_state.all_results.append(result)
+                    # 分析每一页
+                    for i, image in enumerate(images):
+                        with st.spinner(f'正在分析第 {i+1}/{len(images)} 页...'):
+                            try:
+                                response = query_page(
+                                    model, image, "分析产品信息", i+1)
+                                if response:
+                                    result = json.loads(response)
+                                    result['页码'] = i + 1
+                                    st.session_state.all_results.append(result)
+                            except Exception as e:
+                                logger.error(f"分析第 {i+1} 页时出错: {str(e)}")
+                                st.error(f"第 {i+1} 页分析失败，继续处理其他页面")
+                                continue
 
-                st.success(f'成功处理并分析完成，共{len(images)}页')
+                    st.session_state.processing_complete = True
+                    st.success(f'成功处理并分析完成，共{len(images)}页')
 
-        # 显示结果
-        if st.session_state.all_results:
-            st.write("### 分析结果")
+            # 显示结果（无论是新处理的还是之前处理过的）
+            if st.session_state.processing_complete:
+                st.write("### 分析结果")
 
-            # 显示每页的结果
-            for i, result in enumerate(st.session_state.all_results):
-                with st.expander(f"第 {result['页码']} 页的分析", expanded=True):
-                    st.json(result)
+                # 显示每页的结果
+                for result in st.session_state.all_results:
+                    with st.expander(f"第 {result['页码']} 页的分析", expanded=True):
+                        st.json(result)
 
-            # 生成CSV下载按钮
-            df = pd.DataFrame(st.session_state.all_results)
+                # 生成CSV下载按钮
+                if st.session_state.all_results:
+                    df = pd.DataFrame(st.session_state.all_results)
 
-            # 预定义所有可能的列
-            expected_columns = [
-                '页码',
-                '產品亮點',
-                '市场价格',
-                '直播价格',
-                '产品信息',
-                '口味',
-                '赠品',
-                '产品卖点',
-                '其他优势'
-            ]
+                    # 预定义所有可能的列
+                    expected_columns = [
+                        '页码',
+                        '產品亮點',
+                        '市场价格',
+                        '直播价格',
+                        '产品信息',
+                        '口味',
+                        '赠品',
+                        '产品卖点',
+                        '其他优势'
+                    ]
 
-            # 确保所有列都存在，缺失的填充空字符串
-            for col in expected_columns:
-                if col not in df.columns:
-                    df[col] = ''
+                    # 确保所有列都存在，缺失的填充空字符串
+                    for col in expected_columns:
+                        if col not in df.columns:
+                            df[col] = ''
 
-            # 按预定义顺序排列列
-            df = df[expected_columns]
+                    # 按预定义顺序排列列
+                    df = df[expected_columns]
 
-            # 将所有 NaN 值替换为空字符串
-            df = df.fillna('')
+                    # 将所有 NaN 值替换为空字符串
+                    df = df.fillna('')
 
-            csv = df.to_csv(index=False)
-            st.download_button(
-                label="下载CSV文件",
-                data=csv,
-                file_name="产品分析结果.csv",
-                mime="text/csv",
-                key="download_button"
-            )
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label="下载CSV文件",
+                        data=csv,
+                        file_name=f"{st.session_state.current_file_name}_分析结果.csv",
+                        mime="text/csv",
+                        key="download_button"
+                    )
 
     except Exception as e:
         logger.error(f"主程序出错: {str(e)}")
