@@ -155,8 +155,8 @@ prompt = """
 【试用人群】
 1. 早上起来脸泡、手泡、脚泡的，感觉怎么自己的脸照镜子和昨晚都不太一样的，一定要早上来一杯黑咖啡的  2. 别人醒来一秒钟脉动进入工作状态的，而你浑身懒洋洋的，容易累、容易乏的  3. 最近爱吹空调、吃冷饮、喝冰水冰咖啡并且还管不住嘴，爱吃油的辣的 4. 大便挂壁的，背上脸上点点的
 【配料表】0糖0脂0卡路里0添加0碳水，微沸慢熬，早上的第一杯放心水，冷热皆宜随时随地打开就可以直接喝，平时常温储存
-【五指毛桃薏米水】就是被称为“广东人参”的五指毛桃+晾晒10天以上的薏米，选用炒过的薏米，因为这样不仅更给力，而且更好喝，每瓶添加超过750mg的五指毛桃，以及5000mg薏米
-【枸杞桂圆水】精选桂圆三宝：“桂圆肉、桂圆核、桂圆壳”，每瓶添加3500mg以上的桂圆干，经过48h烘烤，碾碎，整颗桂圆连肉带壳一起煮，营养不流失，再加500mg+的NFC枸杞原浆
+【五指毛桃薏米水】就是被称为"广东人参"的五指毛桃+晾晒10天以上的薏米，选用炒过的薏米，因为这样不仅更给力，而且更好喝，每瓶添加超过750mg的五指毛桃，以及5000mg薏米
+【枸杞桂圆水】精选桂圆三宝："桂圆肉、桂圆核、桂圆壳"，每瓶添加3500mg以上的桂圆干，经过48h烘烤，碾碎，整颗桂圆连肉带壳一起煮，营养不流失，再加500mg+的NFC枸杞原浆
 陈皮水：水、陈皮、白茶、青柑皮浓缩液、碳酸氢钠
 喝法：1.直接喝（冷热都好喝）2.搭配咖啡成为中式茶咖  3. 柠檬片或柠檬汁。4.炖鸡汤排骨汤
 "
@@ -213,34 +213,10 @@ def query_page(model, image, question, page_num):
 
             logger.info(f"发送请求到Gemini API - 第 {page_num} 页")
             response = chat.send_message("请提供产品分析结果")
-
             logger.info(f"收到Gemini API响应 - 第 {page_num} 页")
-            logger.info(f"响应内容: {response.text}")
 
-            # 尝试解析JSON响应
-            try:
-                # 清理响应文本
-                text = response.text
-                if "```json" in text:
-                    text = text.split("```json")[1]
-                if "```" in text:
-                    text = text.split("```")[0]
+            return response.text  # 直接返回响应文本
 
-                result = json.loads(text.strip())
-                logger.info(f"成功解析JSON响应 - 第 {page_num} 页")
-                return result
-            except Exception as e:
-                logger.error(f"JSON解析错误 - 第 {page_num} 页: {str(e)}")
-                return {
-                    "產品亮點": "",
-                    "市场价格": "",
-                    "直播价格": "",
-                    "产品信息": response.text,
-                    "口味": "",
-                    "赠品": "",
-                    "产品卖点": "",
-                    "其他优势": ""
-                }
         finally:
             # 清理临时文件
             os.unlink(tmp_file_path)
@@ -248,16 +224,7 @@ def query_page(model, image, question, page_num):
     except Exception as e:
         logger.error(f"查询页面时出错 - 第 {page_num} 页: {str(e)}")
         logger.error(traceback.format_exc())
-        return {
-            "產品亮點": "处理错误",
-            "市场价格": "",
-            "直播价格": "",
-            "产品信息": str(e),
-            "口味": "",
-            "赠品": "",
-            "产品卖点": "",
-            "其他优势": ""
-        }
+        return None
 
 
 def main():
@@ -270,48 +237,56 @@ def main():
         if not model:
             return
 
+        # 创建/获取session state
+        if 'all_results' not in st.session_state:
+            st.session_state.all_results = []
+
         # 文件上传
         uploaded_file = st.file_uploader("上传PDF文件", type=['pdf'])
 
         if uploaded_file:
             logger.info(f"收到上传文件: {uploaded_file.name}")
-            # 转换PDF为图片
-            with st.spinner('＝＝＝正在处理PDF文件...＝＝＝'):
+            # 转换PDF为图片并立即分析
+            with st.spinner('正在处理文件...'):
                 images = convert_pdf_to_images(uploaded_file)
-                st.session_state['images'] = images
-                logger.info(f"PDF处理完成，共 {len(images)} 页")
-                st.success(f'成功处理PDF文件，共{len(images)}页')
 
-        if 'images' in st.session_state:
-            if st.button('分析产品信息'):
-                logger.info("＝＝＝开始分析所有页面＝＝＝")
-                st.write("### 分页答案")
+                # 清空之前的结果
+                st.session_state.all_results = []
 
-                all_results = []
+                # 分析每一页
+                for i, image in enumerate(images):
+                    with st.spinner(f'正在分析第 {i+1}/{len(images)} 页...'):
+                        response = query_page(model, image, "分析产品信息", i+1)
+                        if response:
+                            result = json.loads(response)
+                            result['页码'] = i + 1
+                            st.session_state.all_results.append(result)
 
-                for i, image in enumerate(st.session_state['images']):
-                    with st.expander(f"第 {i+1} 页的回答"):
-                        with st.spinner(f'正在分析第 {i+1} 页...'):
-                            response = query_page(model, image, "分析产品信息", i+1)
-                            response['页码'] = i + 1
-                            all_results.append(response)
-                            st.json(response)
+                st.success(f'成功处理并分析完成，共{len(images)}页')
 
-                if all_results:
-                    logger.info("开始生成CSV文件")
-                    df = pd.DataFrame(all_results)
-                    columns = ['页码', '產品亮點', '市场价格', '直播价格', '产品信息',
-                               '口味', '赠品', '产品卖点', '其他优势']
-                    df = df[columns]
+        # 显示结果
+        if st.session_state.all_results:
+            st.write("### 分析结果")
 
-                    csv = df.to_csv(index=False)
-                    st.download_button(
-                        label="下载CSV文件",
-                        data=csv,
-                        file_name="产品分析结果.csv",
-                        mime="text/csv"
-                    )
-                    logger.info("CSV文件生成完成")
+            # 显示每页的结果
+            for i, result in enumerate(st.session_state.all_results):
+                with st.expander(f"第 {result['页码']} 页的分析", expanded=True):
+                    st.json(result)
+
+            # 生成CSV下载按钮
+            df = pd.DataFrame(st.session_state.all_results)
+            columns = ['页码', '產品亮點', '市场价格', '直播价格', '产品信息',
+                       '口味', '赠品', '产品卖点', '其他优势']
+            df = df[columns]
+
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="下载CSV文件",
+                data=csv,
+                file_name="产品分析结果.csv",
+                mime="text/csv",
+                key="download_button"
+            )
 
     except Exception as e:
         logger.error(f"主程序出错: {str(e)}")
