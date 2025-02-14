@@ -146,7 +146,7 @@ def convert_image_to_base64(image):
 
 
 prompt = """
-輸出成 csv 格式, 要有 產品亮點 市场价格 直播价格 产品信息 口味 贈品 四個欄位
+輸出成 csv 格式, 要有 產品亮點 市场价格 直播价格 产品信息 口味 贈品 产品卖点 其他优势 欄位
 注意 產品亮點 要學習範例內的格式，要有【】
 以下是 範例 
 {
@@ -275,9 +275,30 @@ def main():
 
             # 生成CSV下载按钮
             df = pd.DataFrame(st.session_state.all_results)
-            # columns = ['页码', '產品亮點', '市场价格', '直播价格', '产品信息',
-            #            '口味', '赠品', '产品卖点', '其他优势']
-            # df = df[columns]
+
+            # 预定义所有可能的列
+            expected_columns = [
+                '页码',
+                '產品亮點',
+                '市场价格',
+                '直播价格',
+                '产品信息',
+                '口味',
+                '赠品',
+                '产品卖点',
+                '其他优势'
+            ]
+
+            # 确保所有列都存在，缺失的填充空字符串
+            for col in expected_columns:
+                if col not in df.columns:
+                    df[col] = ''
+
+            # 按预定义顺序排列列
+            df = df[expected_columns]
+
+            # 将所有 NaN 值替换为空字符串
+            df = df.fillna('')
 
             csv = df.to_csv(index=False)
             st.download_button(
