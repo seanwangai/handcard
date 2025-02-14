@@ -47,7 +47,7 @@ def initialize_gemini():
             "temperature": 1,
             "top_p": 0.95,
             "top_k": 40,
-            "max_output_tokens": 8192,
+            "max_output_tokens": 81920,
             "response_schema": genai.protos.Schema(
                 type=genai.protos.Type.OBJECT,
                 properties={
@@ -146,7 +146,7 @@ def convert_image_to_base64(image):
 
 
 prompt = """
-把圖片中的信息，分類進入 以下欄位: 產品亮點 市场价格 直播价格 产品信息 口味 贈品 产品卖点 其他优势 
+把圖片中的信息，分類進入以下欄位: 產品亮點 市场价格 直播价格 产品信息 口味 贈品 产品卖点 其他优势，並以json 格式輸出
 注意 產品亮點 要學習範例內，要有【】，產品亮點 要越詳細越好
 注意 輸出一定一定一定要有 產品亮點 欄位
 注意 越長越完整越好 越長越好 圖片內的文字有提到的 全部都要納入
