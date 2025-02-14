@@ -113,7 +113,7 @@ def convert_pdf_to_images(pdf_file):
         logger.info(f"PDF文件共 {pdf_document.page_count} 页")
 
         for page_num in range(pdf_document.page_count):
-            logger.info(f"正在处理第 {page_num + 1} 页")
+            logger.info(f"正在轉換第 {page_num + 1} 页")
             page = pdf_document[page_num]
             # 降低分辨率以减小文件大小
             pix = page.get_pixmap(matrix=fitz.Matrix(
@@ -150,6 +150,7 @@ prompt = """
 注意 產品亮點 要學習範例內，要有【】，產品亮點 要越詳細越好
 注意 輸出一定一定一定要有 產品亮點 欄位
 注意 越長越完整越好 越長越好 圖片內的文字有提到的 全部都要納入
+赠品 如果沒有 就顯示 "無" 
 其他优势 欄位 交給你自由發揮，要辨識圖片內有趣的
 以下是 範例 
 {
@@ -272,7 +273,9 @@ def main():
             # 处理每一页
             if st.session_state.processed_images is not None:
                 total_pages = len(st.session_state.processed_images)
-                if st.session_state.current_page < total_pages:
+
+                # 处理未完成的页面
+                while st.session_state.current_page < total_pages:
                     image = st.session_state.processed_images[st.session_state.current_page]
                     with st.spinner(f'正在分析第 {st.session_state.current_page + 1}/{total_pages} 页...'):
                         try:
