@@ -147,7 +147,7 @@ def convert_image_to_base64(image):
 
 prompt = """
 輸出成 csv 格式, 要有 產品亮點 市场价格 直播价格 产品信息 口味 贈品 产品卖点 其他优势 欄位
-注意 產品亮點 要學習範例內的格式，要有【】
+注意 產品亮點 要學習範例內，要有【】
 以下是 範例 
 {
 "產品亮點": {
@@ -240,6 +240,8 @@ def main():
             st.session_state.current_file_name = None
         if 'processing_complete' not in st.session_state:
             st.session_state.processing_complete = False
+        if 'current_page' not in st.session_state:
+            st.session_state.current_page = 0  # 当前处理的页码
 
         # 初始化模型
         model = initialize_gemini()
@@ -262,24 +264,33 @@ def main():
                     st.session_state.current_file_name = uploaded_file.name
                     st.session_state.processing_complete = False
                     st.session_state.all_results = []  # 清空之前的结果
+                    st.session_state.current_page = 0  # 重置当前页码
 
-                    # 分析每一页
-                    for i, image in enumerate(images):
-                        with st.spinner(f'正在分析第 {i+1}/{len(images)} 页...'):
-                            try:
-                                response = query_page(
-                                    model, image, "分析产品信息", i+1)
-                                if response:
-                                    result = json.loads(response)
-                                    result['页码'] = i + 1
-                                    st.session_state.all_results.append(result)
-                            except Exception as e:
-                                logger.error(f"分析第 {i+1} 页时出错: {str(e)}")
-                                st.error(f"第 {i+1} 页分析失败，继续处理其他页面")
-                                continue
+            # 处理每一页
+            if st.session_state.processed_images is not None:
+                total_pages = len(st.session_state.processed_images)
+                if st.session_state.current_page < total_pages:
+                    image = st.session_state.processed_images[st.session_state.current_page]
+                    with st.spinner(f'正在分析第 {st.session_state.current_page + 1}/{total_pages} 页...'):
+                        try:
+                            response = query_page(
+                                model, image, "分析产品信息", st.session_state.current_page + 1)
+                            if response:
+                                result = json.loads(response)
+                                result['页码'] = st.session_state.current_page + 1
+                                st.session_state.all_results.append(result)
+                                st.session_state.current_page += 1  # 处理下一页
+                        except Exception as e:
+                            logger.error(
+                                f"分析第 {st.session_state.current_page + 1} 页时出错: {str(e)}")
+                            st.error(
+                                f"第 {st.session_state.current_page + 1} 页分析失败，继续处理其他页面")
+                            st.session_state.current_page += 1  # 处理下一页
 
+                # 检查是否处理完成
+                if st.session_state.current_page >= total_pages:
                     st.session_state.processing_complete = True
-                    st.success(f'成功处理并分析完成，共{len(images)}页')
+                    st.success(f'成功处理并分析完成，共{total_pages}页')
 
             # 显示结果（无论是新处理的还是之前处理过的）
             if st.session_state.processing_complete:
